@@ -20,5 +20,3 @@ dick = "dick.cli:main"
 [tool.setuptools.packages.find]
 include = ["dick*"]
 
-[tool.setuptools.package-data]
-dick = ["webui/*.html", "webui/*.css", "webui/*.js"]

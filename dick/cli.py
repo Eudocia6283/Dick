@@ -408,29 +408,6 @@ def run_upgrade(settings, args):
     return 0 if code == 0 else 1
 
 
-def report_self(payload):
-    """把 updateme / removeme 的结果讲清楚：先回显命令，再回显输出，最后给结论。"""
-    label = "计划：" if payload["dry_run"] else "执行："
-    for command in payload.get("commands", ()):
-        report(label + " ".join(str(part) for part in command))
-    for line in payload.get("lines", ()):
-        report("  " + line)
-    for path in payload.get("removed", ()):
-        report(("将删除：" if payload["dry_run"] else "已删除：") + path)
-    if payload["message"]:
-        report(payload["message"])
-
-
-def run_self(settings, action, args):
-    from .selfmanage import run_remove, run_update
-    payload = run_update(settings, args) if action.name == "updateme" else run_remove(settings, args)
-    if args.json:
-        emit(payload)
-    else:
-        report_self(payload)
-    return 0 if payload["success"] else 1
-
-
 def run(argv):
     args, remaining = options(argv)
     if args.help or not argv:
@@ -439,9 +416,7 @@ def run(argv):
     action = normalize(remaining)
     settings = Settings(args.config, args.root, args.cache_dir, args.jobs,
                         create=action.name in {"source_enable", "source_disable",
-                                               "source_autorank", "source_ranking", "web"})
-    if action.name in {"updateme", "removeme"}:
-        return run_self(settings, action, args)
+                                               "source_autorank", "source_ranking"})
     check_enabled(settings, args, action)
     if action.name in {"source_enable", "source_disable"}:
         return update_sources(settings, action, args)
@@ -449,11 +424,6 @@ def run(argv):
         return run_autorank(settings, action, args)
     if action.name == "source_ranking":
         return run_ranking(settings, args)
-    if action.name == "web":
-        from .web import serve
-        return serve(settings, args.host or settings.web_host, args.port or settings.web_port,
-                     open_browser=args.open_browser, tls=args.tls, token=args.token,
-                     no_token=args.no_token)
     if action.name in MUTATING and not args.dry_run and settings.root.resolve() != Path("/").resolve():
         raise DickError("--root 只用于读取源配置；系统变更请在真实根目录下执行，或使用 --dry-run")
     repositories, errors = discover(settings, respect_enabled=action.name not in SOURCE_VIEWS,

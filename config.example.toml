@@ -24,8 +24,8 @@ order = ["apk", "flatpak", "linyaps", "guix", "nixpkgs", "snap"]
 # 自动来源排序（默认 true）：安装时若 flatpak 排在原生源（pacman/apt/dnf/apk）前面，
 # 而目标又是 IDE / 开发类应用（AppStream 分类含 IDE 或 Development），就把它自动降到
 # 原生源之后再试——flatpak 沙箱访问不到系统级工具链。改成 false 就完全按上面的 order
-# 来，可用 `dick source ranking`（方向键界面）或网页设置页的拖拽列表手工排序。
-# 网页上的「自动来源排序」开关与 `dick source autorank enable|disable` 都写回这一行。
+# 来，可用 `dick source ranking`（方向键界面）手工排序。
+# `dick source autorank enable|disable` 会写回这一行。
 [install]
 autorank = true
 
@@ -44,36 +44,6 @@ timeout = 20
 max_bytes = 67108864
 workers = 4
 
-# dick web 的监听地址。默认只绑定本机回环，端口默认 3907。
-# 绑到 0.0.0.0 给手机/别的电脑用时，务必保持下面 tls + token 开着：
-# 界面里有 sudo 密码框，明文 HTTP 走局域网会把密码暴露给同网段的人。
-[web]
-host = "127.0.0.1"
-port = 3907
-# tls = true 会用 openssl 在配置目录旁的 tls/ 里生成自签证书（首次浏览会警告一次），
-# 命令行上的 --tls / --no-tls 优先。cert / key 可以指向自己的证书。
-# tls = false
-# cert = "/etc/dick/server.crt"
-# key = "/etc/dick/server.key"
-# 访问令牌：留空则首次启动自动生成并写入同目录的 web-token 文件。
-# 命令行上的 --token / --no-token 优先（--no-token 只在 127.0.0.1 上这么用）。
-# token = ""
-
-# 可选：网页里的 AI 翻译（设置页保存后会写回这一段）。
-# api 三选一：openai = OpenAI 兼容的 /chat/completions（DeepSeek、Moonshot、Ollama、
-# 多数中转网关），openai-responses = OpenAI 的 Responses 接口，anthropic = Claude 的
-# Messages 接口；留空会按 base_url 猜（含 anthropic 就是 anthropic，否则 openai）。
-# base_url 不用写全：DICK 会补上 /v1/chat/completions 这类后缀。
-# DICK_AI_BASE_URL、DICK_AI_MODEL、DICK_AI_API_KEY、DICK_AI_API、DICK_AI_TARGET 优先于这里。
-[ai]
-enabled = false
-api = "openai"
-base_url = "https://api.deepseek.com"
-model = "deepseek-chat"
-api_key = ""
-target = "中文"
-timeout = 60
-# prompt = "自定义系统提示词；留空使用内置的翻译提示词"
 
 # [dnf]
 # releasever = "43"

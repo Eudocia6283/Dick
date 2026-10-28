@@ -6,7 +6,6 @@ import platform
 import shutil
 import tomllib
 
-from .ai import APIS as AI_APIS
 from .models import DickError
 
 
@@ -84,8 +83,6 @@ class Settings:
                 "order", PRIORITIES[self.family]
             )
             configured_sources = self.data.get("sources", {})
-            ai = self.data.get("ai", {})
-            web = self.data.get("web", {})
             install = self.data.get("install", {})
         except (TypeError, ValueError, AttributeError) as error:
             raise DickError(f"配置字段类型错误：{error}") from error
@@ -117,9 +114,6 @@ class Settings:
         if self.ttl < 0 or not math.isfinite(self.timeout) or self.timeout <= 0 or self.max_bytes <= 0 or self.workers <= 0:
             raise DickError("缓存 TTL 不能为负数，网络限制和并发数必须大于零")
         self.query_ttls = self._query_ttls(configured_query_ttls)
-        self.ai = self._ai_settings(ai)
-        (self.web_host, self.web_port, self.web_tls,
-         self.web_cert, self.web_key, self.web_token) = self._web_settings(web)
         cache_home = Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache"))
         self.cache_dir = Path(cache_dir) if cache_dir else cache_home / "dick"
 
@@ -139,75 +133,6 @@ class Settings:
     def query_ttl(self, source):
         """某个来源的按需查询缓存有效期：没有单独配置就用 [cache] ttl。"""
         return self.query_ttls.get(source, self.ttl)
-
-    def _ai_settings(self, ai):
-        """解析 [ai] 段，环境变量优先于配置文件。
-
-        `configured` 只表示凭据齐全（地址 + 模型 + 密钥），齐全就能测连通、拉模型列表；
-        `enabled` 单独表示「要不要自动翻译包描述」。两者分开，才不会出现「明明填好了
-        却提示去填地址」这种把人带偏的报错。
-        """
-        if not isinstance(ai, dict):
-            raise DickError("ai 配置必须是表")
-        enabled = ai.get("enabled", False)
-        if not isinstance(enabled, bool):
-            raise DickError("ai.enabled 必须为布尔值")
-        environment = os.environ
-        base_url = environment.get("DICK_AI_BASE_URL", ai.get("base_url", "https://api.deepseek.com/v1"))
-        model = environment.get("DICK_AI_MODEL", ai.get("model", "deepseek-chat"))
-        api_key = environment.get("DICK_AI_API_KEY", ai.get("api_key", ""))
-        target = environment.get("DICK_AI_TARGET", ai.get("target", "中文"))
-        prompt = ai.get("prompt", "")
-        api = environment.get("DICK_AI_API", ai.get("api", ""))
-        try:
-            timeout = float(ai.get("timeout", 60))
-        except (TypeError, ValueError) as error:
-            raise DickError(f"ai.timeout 必须是数字：{error}") from error
-        for name, value in (("base_url", base_url), ("model", model), ("target", target),
-                            ("prompt", prompt), ("api", api)):
-            if not isinstance(value, str):
-                raise DickError(f"ai.{name} 必须为字符串")
-        if not base_url.startswith(("http://", "https://")):
-            raise DickError("ai.base_url 必须以 http:// 或 https:// 开头")
-        if not model.strip() or not target.strip():
-            raise DickError("ai.model 和 ai.target 不能为空")
-        if not isinstance(api_key, str):
-            raise DickError("ai.api_key 必须为字符串")
-        if not math.isfinite(timeout) or timeout <= 0:
-            raise DickError("ai.timeout 必须大于零")
-        api = api.strip().lower()
-        if not api:  # 老配置没写 api：按地址猜，anthropic 的地址认成 Messages 接口
-            api = "anthropic" if "anthropic" in base_url.lower() else "openai"
-        if api not in AI_APIS:
-            raise DickError("ai.api 只能是 " + "、".join(AI_APIS) + " 之一")
-        enabled = enabled or bool(environment.get("DICK_AI_ENABLED") or environment.get("DICK_AI_API_KEY"))
-        base_url = base_url.rstrip("/")
-        return {"enabled": enabled, "api": api, "base_url": base_url, "model": model, "api_key": api_key,
-                "target": target, "timeout": timeout, "prompt": prompt,
-                "configured": bool(base_url and model.strip() and api_key.strip())}
-
-
-    def _web_settings(self, web):
-        if not isinstance(web, dict):
-            raise DickError("web 配置必须是表")
-        host = web.get("host", "127.0.0.1")
-        port = web.get("port", 3907)
-        tls = web.get("tls", False)
-        cert = web.get("cert", "")
-        key = web.get("key", "")
-        token = web.get("token", "")
-        if not isinstance(host, str) or not host.strip():
-            raise DickError("web.host 必须为非空字符串")
-        if isinstance(port, bool) or not isinstance(port, int) or not 1 <= port <= 65535:
-            raise DickError("web.port 必须是 1-65535 之间的整数")
-        if not isinstance(tls, bool):
-            raise DickError("web.tls 必须为布尔值")
-        for name, value in (("cert", cert), ("key", key), ("token", token)):
-            if not isinstance(value, str):
-                raise DickError(f"web.{name} 必须为字符串")
-        if bool(cert) != bool(key):
-            raise DickError("web.cert 和 web.key 必须同时提供")
-        return host, port, tls, cert, key, token
 
     def _releasever(self):
         try:
@@ -229,8 +154,8 @@ class Settings:
     def available_sources(self):
         """本机可用的来源，按当前安装优先级排列。
 
-        `source ranking` 与网页的来源排序列表都用它：不可用的来源（没装的 flatpak、
-        不是 Arch 的 aur 等）排不排都一样，索性不出现在可拖拽的列表里。
+        `source ranking` 使用它：不可用的来源（没装的 flatpak、
+        不是 Arch 的 aur 等）不会出现在列表里。
         """
         available = [source for source in SOURCES if self.available(source)]
         ordered = [source for source in self.priority if source in available]
@@ -330,21 +255,3 @@ class Settings:
         self.priority = ordered
         return list(ordered)
 
-    def set_ai(self, values):
-        """把 AI 设置写回 [ai] 段并刷新内存状态。"""
-        literals = {}
-        for key, value in values.items():
-            if isinstance(value, bool):
-                literals[key] = "true" if value else "false"
-            elif isinstance(value, (int, float)):
-                literals[key] = repr(value)
-            else:
-                literals[key] = json.dumps(str(value), ensure_ascii=False)
-        self.write_section("ai", literals)
-        stored = self.data.get("ai")
-        if not isinstance(stored, dict):
-            stored = {}
-        stored.update(values)
-        self.data["ai"] = stored
-        self.ai = self._ai_settings(stored)
-        return self.ai

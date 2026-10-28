@@ -1,241 +1,49 @@
-# DICK — Detective Index Collection Kit
+# DICK CLI（精简版）
 
-一个依赖python基础库的，管理所有软件包管理器的工具
+基于 [yunli396/Dick](https://github.com/yunli396/Dick) 的命令行精简版，保留跨软件源搜索、安装和常用包管理功能。移除了 Web 界面、远程访问、令牌、证书和网页 AI 翻译；软件源索引与包管理器仍可能需要联网。基于上游提交 `6db89e0`，原项目采用 MIT 许可证，见 [LICENSE](LICENSE)。
 
-## 安装与运行
+## 运行和安装
 
-需要 **Python 3.11+**。（仅在Python 3.11经过测试）
+需要 Python 3.11 或更新版本，运行时仅依赖标准库。从本目录直接运行：
 
-### 一键安装
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/yunli396/Dick/main/install.sh | bash
+```sh
+python -m dick --help
+python -m dick source list
+python -m dick source scan
+python -m dick update --source pacman
+python -m dick search firefox
+python -m dick install firefox --dry-run
 ```
 
-脚本同时可用于更新。装好之后，更新和卸载也可以直接交给 DICK 自己：
+也可以从此源码目录安装：
 
-```bash
-dick updateme             # 更新 DICK 自己（git pull + 重装进 venv）
-dick updateme --dry-run   # 只看会执行哪些命令
-dick updateme --ref dev   # 换到别的分支或标签
-dick removeme             # 卸载 DICK（默认保留 ~/.config/dick 里的配置）
-dick removeme --purge     # 连配置与缓存一起删
+```sh
+pipx install .
+# 或使用你管理的 Python 虚拟环境：python -m pip install .
 ```
 
-`updateme` / `removeme` 只认 install.sh 装出来的目录结构（`<前缀>/share/dick/{venv,src}` 与 `<前缀>/bin/dick` 软链，默认前缀 `~/.local`，可用 `--prefix` 指定）。从源码工作区直接跑时，`updateme` 就是 `git pull --ff-only`，`removeme` 会拒绝执行并说明原因——它不会去删你的工作区；装在系统 Python 里的 DICK 会告诉你该用哪个包管理器。卸载需要交互确认，脚本里请显式加 `--yes`。
-
-也可以用安装脚本本身卸载：
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/yunli396/Dick/main/install.sh | bash -s -- --uninstall
-```
-
-### 手动安装
-
-从源码目录安装（也可以 `pipx install .`）：
-
-```bash
-python -m pip install .
-dick --help
-dick source list
-dick source scan
-dick search firefox
-dick list --source pacman
-dick install firefox --dry-run
-dick install firefox
-dick upgrade
-dick web
-```
-
-不安装也可以在项目目录运行 `python -m dick`。项目仅依赖 Python 标准库。
-
-## 界面
-
-`dick web` 出来的样子：
-
-![精选首页](docs/screenshots/home.png)
-
-首页是类似Microsoft Store的界面。索引里没有的包会退回同名搜索：
-
-![搜索结果](docs/screenshots/search.png)
-
-![软件包详情](docs/screenshots/detail.png)
-
-底部任务面板把原生管理器的输出实时回灌进来——安装前先演练命令，确认后才真的执行，需要提权时会问一次 sudo 密码：
-
-![任务面板](docs/screenshots/task.png)
-
-![已安装列表](docs/screenshots/installed.png)
-
+安装后将上述命令中的 `python -m dick` 换成 `dick`。正式安装软件时去掉 `--dry-run`；程序会调用对应的原生包管理器，可能需要提权。它不会自己构建 AUR 包，需要本机安装 `paru` 或 `yay`。
 
 ## 命令
 
-| 命令 | 作用 |
+| 命令 | 用途 |
 | --- | --- |
-| `dick source list` | 读取配置文件，列出来源、启用状态与 |
-| `dick source scan` | 重新探测仓库 |
-| `dick source enable pacman` | 启用来源 |
-| `dick source disable snap` | 禁用来源 |
-| `dick source autorank [enable\|disable]` | 查看或开关自动来源排序（默认开启） |
-| `dick source ranking` | 关掉自动排序后，用方向键 TUI 手工排安装优先级 |
-| `dick install <包> [--source X]` | 按来源安装，可输入多个 |
-| `dick remove <包> [--deep]` | 扫描本机已安装列表，列出同名/相似名候选后卸载 |
-| `dick list [关键词] [--source X]` | 列出本机已安装的包 |
-| `dick search <关键词> [--source X] [--exact]` | 搜索索引与缓存 |
-| `dick update [--source X]` | 刷新索引与缓存 |
-| `dick upgrade [--source X]` | 升级 |
-| `dick updateme [--ref 分支] [--prefix 路径]` | 更新 DICK 自己（install.sh 装法：git + pip；源码工作区：`git pull --ff-only`） |
-| `dick removeme [--purge] [--prefix 路径]` | 卸载 DICK 自己；默认保留配置，`--purge` 连配置与缓存一起删 |
-| `dick web [--host H] [--port P] [--open] [--tls\|--no-tls] [--token T\|--no-token]` | 启动本地 Web GUI，默认 `http://127.0.0.1:3907` |
+| `source list` / `source scan` | 查看支持的来源 / 扫描本机源配置 |
+| `source enable` / `source disable` | 启用或禁用来源 |
+| `source autorank` / `source ranking` | 查看或调整安装来源优先级 |
+| `search 关键词` | 搜索软件源和缓存 |
+| `install 包名` | 根据来源优先级尝试安装 |
+| `list [关键词]` / `remove 包名` | 查看或卸载已安装软件 |
+| `update` / `upgrade` | 刷新索引 / 使用原生包管理器升级 |
 
-全局选项：`--source`（可重复）、`--json`、`--dry-run`、`-y` / `--yes` / `--noconfirm`、`--exact`（搜索只做精确匹配，同时匹配 ID 别名）、`--deep`（仅 `remove`，连带清理依赖与配置）、`--limit`（每个来源显示上限，默认 50）、`--jobs`、`--config`、`--cache-dir`、`--root`、`--prefix` / `--ref` / `--purge`（仅 `updateme` / `removeme`）、`--host` / `--port` / `--open` / `--tls` / `--token` / `--no-token`（仅 `web`）、`--version`、`-h`。
+支持 pacman、AUR、APT、DNF、APK、Flatpak、玲珑、Guix、Nix 和 Snap；实际可用来源取决于本机环境。按需查询的来源可能直接联网或调用本机工具；其他来源通常需要先运行 `dick update` 建立索引。可用 `--source pacman` 限定来源、`--json` 输出机器可读结果。完整选项见 `dick --help`。
 
-## 来源支持
+配置示例见 [config.example.toml](config.example.toml)，默认配置路径为 `~/.config/dick/config.toml`，默认缓存路径为 `~/.cache/dick`。本版沿用上游的配置和缓存位置；已有配置中的 `[web]` 和 `[ai]` 段会被忽略。可以用 `--config` 和 `--cache-dir` 指定其他路径。
 
-| 来源 | 搜索数据 | 本机列表 / 卸载 | 原生安装 | 当前范围 |
-| --- | --- | --- | --- | --- |
-| Pacman | `pacman.conf` 和递归 `Include` 中的 `Server` → `.db` | `pacman -Qn` / `pacman -R [-Rns]` | `pacman -S repo/name` | 首要链路，多镜像失败自动切换，zstd/gzip/xz/bzip2/未压缩 tar |
-| AUR | 官方 RPC v5 的 search/info | `pacman -Qm` / `pacman -R [-Rns]` | `paru` 或 `yay` | Arch 上按需查询，默认缓存 15 分钟；不自行下载或构建 PKGBUILD。DICK 只负责准备 `paru -S aur/名称` 这样的命令；PATH 里没有 `paru`/`yay` 时 `dick source list\|scan` 会提示 `sudo pacman -S paru` |
-| Flatpak | `flatpak remotes`、`flatpak remote-ls --json`（老版本退回 TSV）+ 远程仓库自己的 AppStream | `flatpak list --app` / `flatpak uninstall` | `flatpak install remote ID` | 远端的应用，默认 Flatpak 安装作用域；用的就是 `flatpak remotes` 列出的**你自己的**远程和镜像，`remote-ls` 不给描述与版本，所以 `dick update --source flatpak` 会再拉一份远程的 AppStream 目录（`appstream/<架构>/appstream.xml.gz`，约 10 MB，压缩包按天缓存在缓存目录的 `appstream/` 下，搜索不会触发下载）补齐描述、版本与分类；远程地址取不到这份数据时会跟着仓库 `config` 里的 `redirect-url` 换到官方站点（中科大这类只镜像仓库内容的镜像是如此），两边都没有才退回只显示包名。分类里带 `IDE`/`Development` 的应用在安装时会被自动降级（见「选一个来源不只是排优先级」） |
-| APT | `.list` / Deb822 `.sources` → 各组件与架构的 `Packages` | `dpkg-query -W` / `apt-get remove\|purge` | `apt-get install` | 基础实现，xz/gzip/未压缩索引、平铺仓库、多文件合并 |
-| DNF | `.repo` → `repomd.xml` → primary XML | `rpm -qa` / `dnf remove` | `dnf install` | 基础实现，baseurl/mirrorlist/metalink、元数据 checksum、架构筛选 |
-| APK（Alpine） | `/etc/apk/repositories` → `{架构}/APKINDEX.tar.gz` 内的 `APKINDEX` | `/lib/apk/db/installed` / `apk del` | `apk add --no-cache` | Alpine 原生索引，解析单字母字段（`P`/`V`/`T`/`A`）；`@tag` 标记会被忽略，仓库名取 URL 末两段（`v3.20/main`） |
-| Snap | `snap find` 的列表输出 | `snap list` / `snap remove` | `snap install` | 已安装 Snap 时按需查询，查询缓存默认 15 分钟 |
-| Linyaps | `ll-cli --json search` 的 JSON | `ll-cli --json list --type=app` / `ll-cli uninstall` | `ll-cli install ID` | 已安装 `ll-cli` 时按需查询，查询缓存默认 15 分钟；仓库来自 `ll-cli --json repo show`，读取失败时退化为单一 `linglong` 仓库 |
-| Guix | `guix package -A <正则>` 的四列表格 | `guix package --list-installed` / `guix remove` | `guix install` | 已安装 `guix` 时按需查询，查询缓存默认一天（`[cache.query_ttl]`）；查询按包名匹配（大小写不敏感），`-A` 不输出描述，所以描述列为空；装进用户自己的 profile，不加 sudo |
-| Nixpkgs | `nix search --json nixpkgs <正则>` | `nix profile list --json` / `nix profile remove` | `nix profile install nixpkgs#名称` | 已安装 Nix 时按需查询，查询缓存默认一天（`[cache.query_ttl]`）；需要 Nix 2.4+ 的新 CLI（flake），DICK 会自己带上 `--extra-experimental-features 'nix-command flakes'`，不必手改 `nix.conf`；属性路径去掉 `legacyPackages.<系统>.` 前缀当名称，精确匹配时优先整名相等（`hello` 不会被 `haskellPackages.hello` 顶掉，只有 `python3Packages.requests` 这类才退到末段匹配）；已安装列表的版本从 store 路径解析（`nix profile list --json` 没有版本字段）；装进用户 profile，不加 sudo |
+本版移除了上游指向原仓库的安装脚本及 `updateme` / `removeme` 命令。请用所选安装工具更新或卸载，以免意外恢复成上游完整版本。
 
-Pacman/APT/DNF/APK 搜索不执行 `pacman -Ss`、`apt search`、`dnf search` 或 `apk search`。Flatpak 的应用列表来自 `flatpak remote-ls`（`flatpak search` 在部分镜像上会长时间不返回），描述与版本来自远程仓库自己的 AppStream 目录——那是一个压缩过的 XML，标准库就能解，所以不再需要借助 `flatpak` 命令；Snap 商店、Linyaps 仓库、Guix 与 Nixpkgs 也没有本原型采用的稳定公开全量索引格式（Linyaps 依赖 `ll-cli` 自己输出 JSON，Guix 用 `guix package -A`，Nixpkgs 用 `nix search --json`），所以按需求允许的例外使用原生命令。Flatpak/Snap/Linyaps 版本过旧、无远端或输出完全无法解析时会报告错误）。
+## 测试
 
-**请注意：只有pacman、aur、flatpak、linyaps已通过实测！**
-
-## 来源的启用与禁用
-
-`source enable` / `source disable` 把结果写入配置文件的 `[sources] enabled`，使用外科式编辑，保留其余内容和注释；配置文件或 `[sources]` 段不存在时会创建。禁用后 `search`、`install`、`list`、`update` 都会跳过该来源；显式传入 `--source` 指向已禁用来源会直接报错，并提示运行 `dick source enable`。
-
-`source list` 只读配置，无 `flatpak`、`ll-cli` 或对应原生工具也能运行；`source scan` 才会真正执行原生命令重新探测远端仓库，两者的输出差异就是探测结果。两者都会顺带做一项与仓库无关的检查：Arch 系默认启用 `aur`，而 AUR 自己不会构建包，PATH 里找不到 `paru`/`yay` 时会提示 `没有找到 AUR 助手（paru 或 yay）；装 AUR 包前先装一个，例如：sudo pacman -S paru`（`--json` 下是 `hints` 数组）。两者还会打印自动来源排序的当前状态（`--json` 下是 `autorank` 布尔值）。
-
-## 搜索与缓存
-
-```bash
-dick search browser
-dick search firefox --source pacman --source aur
-dick search firefox --exact
-dick search calculator --source linyaps
-dick search firefox --json --limit 100
-dick update --source pacman
-dick source scan --json
+```sh
+python -m unittest discover -s tests
 ```
-
-统一包记录包含 `name`、`source`、`description`、`version`，以及 `repository`、`architecture`。不同来源与仓库保留独立结果，避免丢失版本或安装位置。
-
-SQLite 默认在 `$XDG_CACHE_HOME/dick/index.sqlite3`，未设置时为 `~/.cache/dick/index.sqlite3`。第一次搜索缺少本地快照时自动拉取所选来源的索引；后续直接查本地快照，通过 `dick update` 手动更新。刷新逐仓库事务提交，下载或解析失败会保留该仓库上一次成功快照，其他仓库可以继续刷新。已移除或已禁用的源不参与搜索。
-
-AUR/Snap/Linyaps/Guix/Nixpkgs 没有全量本地索引，查询结果按关键词缓存，默认 15 分钟；Guix 与 Nixpkgs 每查一次都要现跑一次慢速原生命令，默认缓存一天（可用 `[cache.query_ttl]` 逐来源调整）。`dick update` 会清空它们的查询缓存。查询失败会打印警告，跨源搜索仍展示成功来源；JSON 的 `errors` 字段保留失败信息。完整刷新有任意失败时返回非零状态。
-
-## 本机列表与卸载
-
-```bash
-dick list
-dick list --source pacman
-dick list firefox --limit 50
-dick remove firefox --dry-run
-dick remove firefox
-dick remove firefox --deep
-dick remove firefox --source flatpak --yes
-```
-
-`list` 直接执行各来源的已安装列表命令（见来源支持表），按来源分组、按名称排序，`--limit` 是**每个来源**的显示上限，超出时在 stderr 提示总数。带关键词时按「完整名称、反向 DNS 末段、名称中包含」的顺序匹配，因此 `list firefox` 也会列出 `firefox-esr`。
-
-`remove` 不推测应用来源，而是扫描所有启用来源的已安装列表，按「完全同名 → ID 末段 → 前缀 → 子串」排序后展示候选：
-
-- 只有一个候选时，交互终端会要求 `[y/N]` 确认；`--yes` 跳过确认。
-- 多个候选时，交互终端打印编号列表，可以用 `1` 或 `1,3` 选择，直接回车取消。
-- 非交互（管道、`--json`）遇到多个候选会报错并列出全部候选，要求用 `--source` 或完整名称指定，不会自行猜测。
-- 非交互卸载必须显式给出 `--yes`，否则报错，避免脚本意外删除软件；`--dry-run` 只预览命令，因此不需要 `--yes`。
-
-`--deep` 翻译为 Pacman `-Rns`、APT `purge --autoremove`、DNF 的依赖清理配置、Flatpak `--delete-data`；各工具语义不完全相同。Flatpak、Snap、Guix、Nixpkgs 的卸载直接交给各自工具，不需要 `sudo`。玲珑在 DICK 里走 `sudo`（原因见下面的权限说明）；另外玲珑不允许卸载**正在运行**的应用（`ll-cli ps` 能看到运行中的应用），遇到这种情况 DICK 会把 `ll-cli` 的原话报出来，并提示先在应用内退出或执行 `ll-cli kill <应用>` 再重试。APK 用 `apk del`，Alpine 没有单独的 purge 概念，所以 `--deep` 对它没有额外效果。
-
-## 安装与降级
-
-Arch 默认 `pacman → aur → flatpak → linyaps → guix → nixpkgs → snap`；Debian 默认 `apt → flatpak → linyaps → guix → nixpkgs → snap`；Fedora 默认 `dnf → flatpak → linyaps → guix → nixpkgs → snap`；Alpine 默认 `apk → flatpak → linyaps → guix → nixpkgs → snap`。**snap 是固定垫底的兜底来源**：不管 `priority.order` 怎么写，它都会被挪到最后一名；配置里漏掉它也会自动补上（体积大、首次启动慢、桌面集成最差，只在其它来源都没有时才用）。手动写了 `[priority.<家族>] order` 的家族只会按列出的顺序降级，新增来源要自己加进去。逐来源查询准确名称，跳过不存在或不可执行的来源；原生命令失败后尝试下一来源。Ctrl+C 或信号退出会停止降级。多包安装逐包处理，结果逐项报告。除了下面这一条包特征规则，顺序完全由你说了算；不想要它插手，`dick source autorank disable` 关掉即可。
-
-### 选一个来源不只是排优先级
-
-固定优先级只是默认值，真正选源要综合三个维度，DICK 会据此自动调整：
-
-- **使用便利度**：flatpak 沙箱里的 IDE / 开发工具访问不到系统级的工具链（编译器、SDK、容器、shell 环境），做开发基本不可用。所以 `dick install code` 这类多来源安装里，**flatpak 的 IDE / 开发类应用（AppStream 分类含 `IDE` 或 `Development`）会自动降到原生源（pacman/apt/dnf/apk）之后**再尝试，并提示原因；网页搜索结果和详情页也会打上「⚠ IDE/开发工具」标记。原生源都失败后才轮到它时，不再降级（没得降），但同样提醒一句。
-- **安装与更新便利度**：AUR 要先装 `paru`/`yay`，编译安装慢、更新跟随助手的习惯；flatpak 一条命令装完、由系统自动后台更新。默认顺序里 AUR 排在 flatpak 前，但你可以用 `[priority.arch] order = ["pacman", "flatpak", "aur", …]` 按自己口味调。
-- **生态协作性**：Electron / Qt WebEngine 一类应用共用运行时——flatpak 上装的 Electron 应用越多，分摊的 `org.freedesktop.Platform` 运行时内存越省；原生源各装各的反而占内存。这类「多装更省」的优势固定优先级表达不了，所以 DICK 只在 IDE / 开发工具这一个有明确技术判据的场景自动干预，其余交给你。
-
-一句话：**固定优先级决定「先试谁」，包的特征决定「谁根本不适合」**。
-
-自动排序默认开启（只有 IDE / 开发工具这一条规则），嫌它插手就关掉换成手工顺序：
-
-```bash
-dick source autorank              # 只看状态
-dick source autorank disable      # 关掉自动排序，写进 [install] autorank = false
-dick source autorank enable       # 再开启
-dick source ranking               # 关掉之后：方向键 TUI，手工排安装优先级
-```
-
-`source ranking` 界面里 **`↑`/`↓`（或 `k`/`j`）只挪高亮，`J`/`K`（或 `Shift+↑`/`Shift+↓`）才把高亮的来源上下挪**，Enter 保存、`q` 取消；保存写回 `[priority.<家族>] order`。列表里只出现**本机可用**的来源，不可用的（例如没装 flatpak、没装 nix）保留在配置里并按原相对顺序接在后面，`snap` 依旧恒定垫底。它需要交互式终端，`--json` 只打印可排序的来源列表而不进界面；不想进界面也可以直接编辑配置文件。**自动排序开着时 `source ranking` 会拒绝执行**，先 `dick source autorank disable`——否则「谁先谁后」会有两个主人。
-
-网页的「设置」页同样有「自动来源排序」开关，关掉后会展开一个可拖拽的来源列表（也带 `↑`/`↓` 按钮），「保存顺序」写回同一份配置。
-
-安装失败时 DICK 会认出两类「本地元数据没跟上」，各来源最多自动刷新一次本地元数据再重试同一个命令，省得用户自己开终端：
-
-- **索引过期**：镜像上已经换了新版本，本地记的旧文件名一律 404（pacman 报「无法从 … 获取文件」/「无法提交处理」，apt 报 `Hash Sum mismatch`/404）。会先跑 `pacman -Sy`、`apt-get update`、`dnf makecache` 等再重试。
-- **本地包列表从没同步过**：DICK 自己的索引是刚从网上拉下来的，搜索看得到包，原生包管理器却只会说 `Unable to locate package`（apt）、`No match for argument`（dnf）、`target not found`（pacman）、`unable to select packages`（apk）——容器与刚装好的系统里很常见。同样先同步一次本地元数据再重试，仍失败才报告「认不出这个包：可能不在已启用的仓库（组件）里，也可能本地包列表还没同步」。
-
-```bash
-dick install firefox
-dick install firefox --source pacman
-dick install org.mozilla.firefox --source flatpak
-dick install org.deepin.calculator --source linyaps
-dick install 7zip --source apk
-dick install firefox --source guix
-dick install firefox --source nixpkgs
-dick install firefox --dry-run --json
-```
-
-Flatpak 优先匹配完整应用 ID，也支持唯一的 ID 末段别名：`firefox` 可以定位 `org.mozilla.firefox`。多个不同 ID 匹配时要求使用完整 ID。Linyaps 同样接受完整应用 ID、反向 DNS 末段或显示名（`calculator`、`deepin-calculator`、`org.deepin.calculator` 都可定位），多个 ID 匹配时要求完整 ID；安装命令只传应用 ID，具体仓库由 `ll-cli` 自身的仓库优先级解析。其他来源要求同名；此原型不维护“同一软件在不同生态中的所有别名”数据库，也不自动选择 Snap classic 模式等额外权限。
-
-`--dry-run` 显示要执行的原生命令；仍可能联网查询、更新 DICK 缓存。它不调用安装、卸载、升级命令，也无法预测这些命令真正执行后会不会失败。AUR 安装需要事先安装 `paru` 或 `yay`，并以普通用户运行。系统管理器（pacman/apt/dnf/**apk**）需要 root 或 sudo；Flatpak 自己处理权限；Guix 与 Nixpkgs 装进当前用户的 profile（`guix install`、`nix profile install`），**不加 sudo**；玲珑（Linyaps）的安装与卸载由系统 D-Bus 上的 `PackageManager` 服务执行，该服务用 polkit 的 `org.deepin.linglong.PackageManager1.install|uninstall` 规则把关（三条默认值都是 `auth_admin`，普通用户调用要靠桌面会话里的认证框），所以 DICK 同样给它加 `sudo`——否则从手机点「获取」只会等到 `Error 9: not authorized`。
-
-**DICK 的索引与原生管理器本地数据库是两套数据。** `dick update` 只更新 DICK，原生安装仍使用管理器自身的数据库、签名、依赖和优先级规则。Arch 请保持系统正常滚动更新（`dick upgrade` 会调用 `sudo pacman -Syu`）；APT 如需同步原生数据库使用 `sudo apt-get update`。DICK 不以单独的原生 `pacman -Sy` 自动引入局部升级风险。
-
-## 配置
-
-保存配置至 `$XDG_CONFIG_HOME/dick/config.toml`（默认 `~/.config/dick/config.toml`），或传入 `--config`。完整示例见 `config.example.toml`。
-
-默认每次下载上限 64 MiB、解压上限 256 MiB；大仓库需要调整下载上限，超出解压上限会明确失败。下载使用系统的 HTTPS 证书校验，支持标准代理环境变量；支持 `file://` 方便离线测试。
-
-网页里的「设置」页就是这些配置的可视化入口（来源开关、来源排序、AI 接口、访问令牌都在这里，保存时只改写对应段落）。来源列表只在这一页出现：每行是来源名、本机探测到的仓库和启用开关，右上角的「重新扫描」等同于 `dick source scan`。左边栏只留导航，不重复列一遍来源。
-
-![设置页](docs/screenshots/settings.png)
-
-设置页底部的「DICK 自己」卡片会说明这一份 DICK 装在哪里、能不能自更新（识别正在运行的这份代码，所以从工作区起的服务和 `~/.local` 里的安装不会互相错认），并提供两个按钮：
-
-- **更新 DICK**：和命令行的 `dick updateme` 走同一条路——install.sh 装法会 git 拉取并重装进 venv，源码工作区就是 `git pull --ff-only`；系统包管理器装的 DICK 会提示改用对应管理器升级，按钮直接置灰。任务面板实时回灌 git / pip 的输出，更新完提醒你重启才生效。
-- **重启服务**：原地重启当前进程（`os.execv` 换掉自己的镜像，PID 不变），用来让新代码生效——Python 代码只在启动时加载，静态资源是 `no-store`、刷新页面即可。服务会先把响应写完再重启，页面随后按「启动编号」轮询，确认换了进程才提示成功；这几秒内页面会短暂断开，然后自动恢复，正在跑的任务会中断。
-
-## AI 翻译
-
-「设置」页可以接一个 AI 接口，把索引里的英文包描述翻成目标语言（只翻描述文本，不动包名、版本和命令）。三种接口形态都支持，DICK 按形态拼出正确地址：
-
-| 接口类型 | 典型用途 | 实际请求的地址 |
-| --- | --- | --- |
-| `openai`（OpenAI 兼容） | DeepSeek、Moonshot、Ollama、大多数中转网关 | `<地址>/v1/chat/completions` |
-| `openai-responses` | OpenAI 新的 Responses 接口 | `<地址>/v1/responses` |
-| `anthropic` | Claude 的 Messages 接口 | `<地址>/v1/messages` |
-
-- **地址不用写全**：填 `https://api.deepseek.com` 就够，DICK 会补上 `/v1/chat/completions`；写到 `/v1`、`/v1/`、`/v1/chat/completions`，或带查询参数（如 `?api-version=2024-10-21`）都不会重复拼接。设置页在地址框下面实时显示最终会请求的完整地址。
-- **模型名可以自动拉取**：填好地址与 API Key 后点「获取模型列表」，DICK 请求版本根下的 `/models`（`/v1/chat/completions` → `/v1/models`）并把结果填进候选列表；接口不支持列模型时会明说，手填模型名即可。
-- **「填好了」与「启用了」是两件事**：只要地址、模型、密钥齐全，配置就是完整的——「测试连接」和「获取模型列表」都不需要先启用。`enabled` 只决定**搜索时要不要自动翻译描述**；没勾选时手动翻译会提示去勾选「启用 AI 翻译」，而不是说配置缺失。命令行/配置文件里没有 `enabled` 的老配置同样能测试连通。
-- **凭据可以放在环境变量里**：`DICK_AI_BASE_URL`、`DICK_AI_MODEL`、`DICK_AI_API_KEY`、`DICK_AI_API`、`DICK_AI_TARGET` 优先于配置文件；`api` 留空时按地址猜（含 `anthropic` 就用 Messages 形态）。
-- 翻译结果按「原文 + 目标语言」缓存在缓存目录，同一段描述只翻一次；AI 不可用时搜索照常工作，只是描述保持原文。
-
-## 许可证
-
-MIT，见 [LICENSE](LICENSE)。
